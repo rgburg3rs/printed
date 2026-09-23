@@ -1,75 +1,90 @@
 # printed
-An automated, background email-to-thermal-printer daemon for e-commerce resellers.   It polls an IMAP inbox for incoming label notifications from **Vinted**, **Poshmark**, and **eBay**, silently sends the labels to a 4x6 thermal printer, custom packing slips with item checklists, order metadata, and thank-you notes.
 
-I used AI to write this program so I no longer had to manually crop pdf labels that vinted would send. The packing slip helps with knowing which label is what when they come out of your printer.
+An automated, background email-to-thermal-printer daemon for e-commerce resellers. It polls an IMAP inbox for incoming shipping label notifications from Vinted, Poshmark, and eBay, silently prints them to a 4x6 thermal printer via SumatraPDF, and generates custom companion packing slips with item checklists, buyer/order metadata, and a large decorative Thank You block.
 
-Features
-Automated Polling: Monitors your inbox in the background without user intervention.
+> Why this was built:
+> I used AI to build this tool so I no longer had to manually crop 8.5x11 PDF labels sent by Vinted. The companion packing slip solves the messy problem of labels piling up out of the printer by printing a matching checklist directly behind each label so you always know what goes in which box.
 
-Smart Cropping: Automatically crops margins off uncropped 8.5x11 labels (e.g., Vinted) to fit standard 4x6 thermal labels.
+---
 
-Companion Packing Slips: Prints a matching 4x6 packing checklist slip right after each shipping label:
+Features:
+- Automated Polling: Monitors your IMAP inbox in the background without manual intervention.
+- Smart Cropping: Automatically strips outer margins from 8.5x11 PDF labels (Vinted) to cleanly fit standard 4x6 thermal label stock.
+- Companion Packing Slips: Immediately spools a matching 4x6 checklist right behind each label:
+  * Vinted: Crops and stamps the recipient address block, lists items with check boxes, package size, and tracking numbers.
+  * Poshmark: Parses item titles and the buyer\'s @handle directly from cleaned subject headers.
+  * eBay: Extracts item titles, order numbers, quantities, and buyer handles with built-in noise and URL filtering.
+- Large Floral Thank You Banner: Generates a prominent, vector-drawn floral Thank You card occupying the lower 1/3rd of every packing slip.
+- Silent Printing: Integrates with SumatraPDF for silent, command-line spooling with automatic shrink-to-fit scaling.
+- Automated Retention: Cleans up your inbox by permanently purging processed notification emails older than a configurable window (e.g., 3-7 days).
 
-Vinted: Crops and stamps the recipient address block, lists items, package size, and tracking numbers.
+---
 
-Poshmark: Parses item descriptions and buyer @handle.
+Prerequisites:
+- OS: Windows 10 or 11
+- Printer: 4x6 Thermal Label Printer (e.g., KNAON, Rollo, Munbyn, Zebra) set up and visible in Windows Printers & Scanners.
+- PDF Engine: SumatraPDF (used for silent CLI printing).
+  Default path: C:\Users\administrator\AppData\Local\SumatraPDF\SumatraPDF.exe
+- Python: Python 3.10+
 
-eBay: Extracts item titles, order numbers, quantities, and buyer usernames.
+---
 
-Silent Printing: Integrates with SumatraPDF for background printing with auto-fit margins.
+Email Account Setup (Gmail Example):
 
-Automated Retention: Automatically deletes processed notification emails older than a configurable retention window (e.g., 7 days).
+Modern email providers block raw account passwords over IMAP. You must generate a dedicated App Password.
 
-External Configuration: Control all paths, printer targets, coordinates, and toggles via an external config.ini without recompiling.
+1. Generate a Google App Password:
+   - Go to your Google Account Security Settings (https://myaccount.google.com/security).
+   - Confirm 2-Step Verification is turned ON.
+   - In the search bar at the top of the Google Account page, search for App passwords.
+   - Set an app name (e.g., printed) and select Create.
+   - Copy the generated 16-character password (e.g., abcd efgh ijkl mnop). Use this in your script configuration (spaces are optional).
 
-Prerequisites
-Windows 10 or 11
+2. Verify IMAP Access:
+   - In Gmail, open the Settings gear -> See all settings.
+   - Click the Forwarding and POP/IMAP tab.
+   - Ensure Status: IMAP is enabled is selected, then save changes.
 
-SumatraPDF installed (used for silent, command-line PDF spooling).
+---
 
-Download: SumatraPDF
+Installation & Setup:
 
-Default install path: C:\Users\\AppData\Local\SumatraPDF\SumatraPDF.exe
+1. Clone this repository:
+   git clone https://github.com/rgburg3rs/printed.git
+   cd printed
 
-4x6 Thermal Label Printer (e.g., KNAON, Rollo, Munbyn, Zebra) set up and visible in Windows Printers & Scanners.
+2. Install Python dependencies:
+   pip install pypdf reportlab
 
-Email Account Setup (Gmail Example)
-Because modern email providers require 2-Factor Authentication (2FA), standard passwords will not work over IMAP. You must generate a dedicated App Password.
+3. Configure the script:
+   Open email_print_daemon.py and adjust the configuration variables to match your environment:
+   - IMAP_SERVER = "imap.gmail.com"
+   - IMAP_PORT = 993
+   - EMAIL_ACCOUNT = "your_email@gmail.com"
+   - EMAIL_PASSWORD = "your_16_char_app_password"
+   - PRINTER_NAME = "LABEL_Printer"
+   - SUMATRA_PATH = r"C:\Users\administrator\AppData\Local\SumatraPDF\SumatraPDF.exe"
+   - CROP_TOP = 90
+   - CROP_BOTTOM = 85
+   - CROP_LEFT = 37
+   - CROP_RIGHT = 473
+   - RETENTION_DAYS = 3
 
-1. Generate a Google App Password
-Go to your Google Account Security Settings.
+4. Run the daemon:
+   - Run in terminal (shows live console log output):
+     python email_print_daemon.py
+   - Run silently in background (no console window):
+     pythonw email_print_daemon.py
 
-Ensure 2-Step Verification is turned ON.
+---
 
-In the search bar at the top of the Google Account page, search for App passwords.
+Run on Windows Startup:
 
-Give your app a name (e.g., ThermalPrintDaemon) and click Create.
+To launch the daemon automatically whenever you sign into Windows:
+1. Press Win + R, type shell:startup, and hit Enter.
+2. Right-click inside the folder -> New -> Shortcut.
+3. Set the target to:
+   pythonw.exe "C:\Repo\VintedPrinted\email_print_daemon.py"
+4. Click Next, name the shortcut printed, and click Finish.
 
-Copy the generated 16-character password (e.g., abcd efgh ijkl mnop). This is the password you will use in config.ini (spaces can be removed).
-
-2. Verify IMAP Access
-In Gmail, click the Settings gear → See all settings.
-Navigate to the Forwarding and POP/IMAP tab.
-Ensure Status: IMAP is enabled is selected.
-
-Installation & Configuration
-Option A: Running from Source
-Clone this repository:
-
-Bash
-git clone [https://github.com/yourusername/ThermalPrintDaemon.git](https://github.com/rgburg3rs/printed.git)
-cd printed
-Install Python dependencies:
-
-Bash
-pip install pypdf reportlab
-Configure your settings:
-
-Update your printer name, email credentials, and SumatraPDF path.
-
-Run the daemon:
-
-Bash
-python email_print_daemon.py
-# Or run completely silently in the background:
-pythonw email_print_daemon.py
+Logs are automatically written to logs/label_printer.log with daily midnight rotations.
