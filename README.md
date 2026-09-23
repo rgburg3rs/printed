@@ -65,8 +65,6 @@ Bash
 pip install pypdf reportlab
 Configure your settings:
 
-Copy config.example.ini to config.ini.
-
 Update your printer name, email credentials, and SumatraPDF path.
 
 Run the daemon:
