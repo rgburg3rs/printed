@@ -9,6 +9,7 @@ An automated, background email-to-thermal-printer daemon for e-commerce reseller
 
 Features:
 - Automated Polling: Monitors your IMAP inbox in the background without manual intervention.
+- Filtering on sender addresses: Personal use case is that I have a dedicated mailbox and only a few senders are considered for printing labels.
 - Smart Cropping: Automatically strips outer margins from 8.5x11 PDF labels (Vinted) to cleanly fit standard 4x6 thermal label stock.
 - Companion Packing Slips: Immediately spools a matching 4x6 checklist right behind each label:
   * Vinted: Crops and stamps the recipient address block, lists items with check boxes, package size, and tracking numbers.
