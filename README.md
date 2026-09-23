@@ -1,6 +1,8 @@
 # printed
 An automated, background email-to-thermal-printer daemon for e-commerce resellers.   It polls an IMAP inbox for incoming label notifications from **Vinted**, **Poshmark**, and **eBay**, silently sends the labels to a 4x6 thermal printer, custom packing slips with item checklists, order metadata, and thank-you notes.
 
+I used AI to write this program so I no longer had to manually crop pdf labels that vinted would send. The packing slip helps with knowing which label is what when they come out of your printer.
+
 Features
 Automated Polling: Monitors your inbox in the background without user intervention.
 
