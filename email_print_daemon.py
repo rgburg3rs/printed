@@ -672,7 +672,8 @@ def process_mailbox():
             return
 
         for num in messages[0].split():
-            res, msg_data = mail.fetch(num, "(RFC822)")
+            # BODY.PEEK[] inspects without marking as \Seen
+            res, msg_data = mail.fetch(num, "(BODY.PEEK[])")
             if res != "OK":
                 continue
 
@@ -680,15 +681,16 @@ def process_mailbox():
             msg = email.message_from_bytes(raw_email)
 
             if not is_authorized(msg):
-                logger.warning(f"Ignored email from unauthorized sender: {msg.get('From')}")
-                mail.store(num, "+FLAGS", "\\Seen")
+                logger.debug(f"Skipping unauthorized sender: {msg.get('From')}")
+                mail.store(num, "-FLAGS", "\\Seen")
                 continue
 
             sender = decode_mime_header(msg.get("From", ""))
             raw_subject = decode_mime_header(msg.get("Subject", ""))
             subject = clean_subject_prefix(raw_subject)
-
             email_body = extract_email_body(msg)
+
+            processed_label = False
 
             for part in msg.walk():
                 content_disposition = str(part.get("Content-Disposition", ""))
@@ -710,7 +712,6 @@ def process_mailbox():
                         if label_type == "ebay":
                             logger.info("eBay label -> Printing directly as-is (no crop).")
                             final_pdf = input_pdf
-
                             if PRINT_EBAY_PACKING_SLIP:
                                 ebay_info = parse_ebay_email(subject, email_body)
                                 logger.info(f"Generating eBay packing slip for item: '{ebay_info.get('item')}'...")
@@ -719,7 +720,6 @@ def process_mailbox():
                         elif label_type == "poshmark":
                             logger.info("Poshmark label -> Printing directly (no crop).")
                             final_pdf = input_pdf
-
                             if PRINT_POSHMARK_PACKING_SLIP:
                                 posh_info = parse_poshmark_subject(subject)
                                 logger.info(f"Generating Poshmark packing slip for buyer '{posh_info['buyer']}'...")
@@ -734,7 +734,6 @@ def process_mailbox():
                                 left=CROP_LEFT,
                                 right=CROP_RIGHT
                             )
-
                             if PRINT_VINTED_PACKING_SLIP:
                                 vinted_info = parse_vinted_shipping_info(email_body)
                                 logger.info(f"Generating Vinted packing slip for {len(vinted_info['items'])} item(s)...")
@@ -748,7 +747,7 @@ def process_mailbox():
                         try:
                             logger.info(f"Spooling shipping label to '{PRINTER_NAME}'...")
                             print_with_sumatra(label_path, PRINTER_NAME)
-                            time.sleep(1)
+                            time.sleep(1.5)
                         except Exception as e:
                             logger.error(f"Failed to print shipping label: {e}", exc_info=True)
                         finally:
@@ -764,18 +763,21 @@ def process_mailbox():
                             try:
                                 logger.info(f"Spooling companion packing slip to '{PRINTER_NAME}'...")
                                 print_with_sumatra(slip_path, PRINTER_NAME)
-                                time.sleep(2)
+                                time.sleep(1.5)
                             except Exception as e:
                                 logger.error(f"Failed to print packing slip: {e}", exc_info=True)
                             finally:
                                 if os.path.exists(slip_path):
                                     os.remove(slip_path)
-                        else:
-                            logger.warning("packing_slip_pdf was None or empty; skipped printing slip.")
 
+                        processed_label = True
                         logger.info("Print sequence completed.")
 
-            mail.store(num, "+FLAGS", "\\Seen")
+            # Only mark as read if a shipping label was actually processed
+            if processed_label:
+                mail.store(num, "+FLAGS", "\\Seen")
+            else:
+                mail.store(num, "-FLAGS", "\\Seen")
 
         if RETENTION_DAYS > 0:
             cleanup_old_emails(mail, RETENTION_DAYS)
